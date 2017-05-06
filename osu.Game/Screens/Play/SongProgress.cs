@@ -9,10 +9,12 @@ using System.Collections.Generic;
 using osu.Game.Graphics;
 using osu.Framework.Allocation;
 using System.Linq;
+using osu.Framework.Configuration;
 using osu.Framework.Timing;
 using osu.Game.Rulesets.Objects;
 using osu.Game.Rulesets.Objects.Types;
 using osu.Framework.Graphics.Primitives;
+using osu.Game.Overlays;
 
 namespace osu.Game.Screens.Play
 {
@@ -26,7 +28,7 @@ namespace osu.Game.Screens.Play
 
         private const float transition_duration = 200;
 
-        private readonly SongProgressBar bar;
+        private readonly MusicSliderBar bar;
         private readonly SongProgressGraph graph;
 
         public Action<double> OnSeek;
@@ -47,6 +49,8 @@ namespace osu.Game.Screens.Play
             }
         }
 
+        private readonly BindableDouble seekPosition = new BindableDouble { MinValue = 0, MaxValue = 1 };
+
         [BackgroundDependencyLoader]
         private void load(OsuColour colours)
         {
@@ -60,27 +64,25 @@ namespace osu.Game.Screens.Play
             Height = bottom_bar_height + graph_height + handle_size.Y;
             Y = bottom_bar_height;
 
-            Children = new Drawable[]
+            Add(graph = new SongProgressGraph
             {
-                graph = new SongProgressGraph
+                RelativeSizeAxes = Axes.X,
+                Origin = Anchor.BottomLeft,
+                Anchor = Anchor.BottomLeft,
+                Height = graph_height,
+                Margin = new MarginPadding { Bottom = bottom_bar_height },
+            });
+            Add(bar = new SongProgressBar(bottom_bar_height, graph_height, handle_size)
+            {
+                Alpha = 1,
+                Anchor = Anchor.BottomLeft,
+                Origin = Anchor.BottomLeft,
+                OnSeek = delegate(float position)
                 {
-                    RelativeSizeAxes = Axes.X,
-                    Origin = Anchor.BottomLeft,
-                    Anchor = Anchor.BottomLeft,
-                    Height = graph_height,
-                    Margin = new MarginPadding { Bottom = bottom_bar_height },
+                    OnSeek?.Invoke(firstHitTime + position * (lastHitTime - firstHitTime));
                 },
-                bar = new SongProgressBar(bottom_bar_height, graph_height, handle_size)
-                {
-                    Alpha = 0,
-                    Anchor = Anchor.BottomLeft,
-                    Origin =  Anchor.BottomLeft,
-                    SeekRequested = delegate (float position)
-                    {
-                        OnSeek?.Invoke(firstHitTime + position * (lastHitTime - firstHitTime));
-                    },
-                },
-            };
+                SeekPosition = seekPosition
+            });
         }
 
         protected override void LoadComplete()
@@ -132,7 +134,7 @@ namespace osu.Game.Screens.Play
 
             double progress = ((AudioClock?.CurrentTime ?? Time.Current) - firstHitTime) / lastHitTime;
 
-            bar.UpdatePosition((float)progress);
+            seekPosition.Value = progress;
             graph.Progress = (int)(graph.ColumnCount * progress);
         }
     }

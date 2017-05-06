@@ -37,7 +37,7 @@ namespace osu.Game.Overlays
         private const float bottom_black_area_height = 55;
 
         private Drawable currentBackground;
-        private DragBar progressBar;
+        private MusicSliderBar progressBar;
 
         private Button playButton;
         private Button playlistButton;
@@ -49,6 +49,8 @@ namespace osu.Game.Overlays
         private LocalisationEngine localisation;
 
         private readonly Bindable<WorkingBeatmap> beatmapBacking = new Bindable<WorkingBeatmap>();
+
+        private readonly BindableDouble seekPosition = new BindableDouble { MinValue = 0, MaxValue = 1 };
 
         private Container dragContainer;
         private Container playerContainer;
@@ -182,13 +184,14 @@ namespace osu.Game.Overlays
                                         },
                                     }
                                 },
-                                progressBar = new DragBar
+                                progressBar = new MusicSliderBar()
                                 {
                                     Origin = Anchor.BottomCentre,
                                     Anchor = Anchor.BottomCentre,
                                     Height = progress_height,
                                     Colour = colours.Yellow,
-                                    SeekRequested = seek
+                                    SeekPosition = seekPosition,
+                                    OnSeek = seek
                                 }
                             },
                         },
@@ -223,7 +226,7 @@ namespace osu.Game.Overlays
             {
                 var track = current.Track;
 
-                progressBar.UpdatePosition(track.Length == 0 ? 0 : (float)(track.CurrentTime / track.Length));
+                seekPosition.Value = track.Length == 0 ? 0 : (track.CurrentTime / (double)track.Length);
                 playButton.Icon = track.IsRunning ? FontAwesome.fa_pause_circle_o : FontAwesome.fa_play_circle_o;
 
                 if (track.HasCompleted && !track.Looping) next();

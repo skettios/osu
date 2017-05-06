@@ -10,14 +10,8 @@ using osu.Framework.Graphics.Sprites;
 
 namespace osu.Game.Screens.Play
 {
-    public class SongProgressBar : DragBar
+    public class SongProgressBar : MusicSliderBar
     {
-        public Color4 FillColour
-        {
-            get { return Fill.Colour; }
-            set { Fill.Colour = value; }
-        }
-
         public SongProgressBar(float barHeight, float handleBarHeight, Vector2 handleSize)
         {
             Height = barHeight + handleBarHeight + handleSize.Y;

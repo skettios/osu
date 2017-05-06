@@ -1,23 +1,40 @@
-﻿// Copyright (c) 2007-2017 ppy Pty Ltd <contact@ppy.sh>.
-// Licensed under the MIT Licence - https://raw.githubusercontent.com/ppy/osu/master/LICENCE
-
-using System;
+﻿using System;
+using osu.Framework.Configuration;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Graphics.Transforms;
+using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Input;
 using OpenTK;
+using OpenTK.Graphics;
 
 namespace osu.Game.Overlays
 {
-    public class DragBar : Container
+    public class MusicSliderBar : SliderBar<double>
     {
-        protected readonly Container Fill;
+        public Container Fill { get; }
 
-        public Action<float> SeekRequested;
+        public Color4 FillColour
+        {
+            get { return Fill.Colour; }
+            set { Fill.Colour = value; }
+        }
 
         public bool IsSeeking { get; private set; }
+
+        public Action<float> OnSeek;
+
+        private BindableDouble seekPosition;
+        public BindableDouble SeekPosition
+        {
+            get { return seekPosition; }
+            set
+            {
+                seekPosition = value;
+                Current.BindTo(value);
+            }
+        }
 
         private bool enabled = true;
         public bool IsEnabled
@@ -31,7 +48,7 @@ namespace osu.Game.Overlays
             }
         }
 
-        public DragBar()
+        public MusicSliderBar()
         {
             RelativeSizeAxes = Axes.X;
 
@@ -55,27 +72,12 @@ namespace osu.Game.Overlays
             };
         }
 
-        public void UpdatePosition(float position)
+        protected override void UpdateValue(float value)
         {
-            if (IsSeeking || !IsEnabled) return;
+            if (IsSeeking || !IsEnabled)
+                return;
 
-            updatePosition(position, false);
-        }
-
-        private void seek(InputState state)
-        {
-            float seekLocation = state.Mouse.Position.X / DrawWidth;
-
-            if (!IsEnabled) return;
-
-            SeekRequested?.Invoke(seekLocation);
-            updatePosition(seekLocation);
-        }
-
-        private void updatePosition(float position, bool easing = true)
-        {
-            position = MathHelper.Clamp(position, 0, 1);
-            Fill.TransformTo(() => Fill.Width, position, easing ? 200 : 0, EasingTypes.OutQuint, new TransformSeek());
+            updatePosition(value, false);
         }
 
         protected override bool OnMouseDown(InputState state, MouseDownEventArgs args)
@@ -92,10 +94,23 @@ namespace osu.Game.Overlays
 
         protected override bool OnDragStart(InputState state) => IsSeeking = true;
 
-        protected override bool OnDragEnd(InputState state)
+        protected override bool OnDragEnd(InputState state) => IsSeeking = false;
+
+        private void seek(InputState state)
         {
-            IsSeeking = false;
-            return true;
+            float seekLocation = state.Mouse.Position.X / DrawWidth;
+
+            if (!IsEnabled)
+                return;
+
+            OnSeek?.Invoke(seekLocation);
+            updatePosition(seekLocation);
+        }
+
+        private void updatePosition(float position, bool easing = true)
+        {
+            position = MathHelper.Clamp(position, 0, 1);
+            Fill.TransformTo(() => Fill.Width, position, easing ? 200 : 0, EasingTypes.OutQuint, new TransformSeek());
         }
 
         private class TransformSeek : TransformFloat
